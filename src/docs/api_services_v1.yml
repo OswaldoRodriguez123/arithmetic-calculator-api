@@ -1,0 +1,143 @@
+openapi: 3.0.1
+
+info:
+  version: "1.0.0"
+  title: "Arithmetic calculator"
+  description: API documentation
+
+servers:
+- url: http:localhost:3001/api/v1
+- url: https://arithmetic-calculator-api.onrender.com/api/v1
+
+security:
+- Bearer: []
+
+tags:
+- name: Auth
+  description: Authenticated users
+- name: Operations
+  description: Operations of records
+- name: Records
+  description: Records generated
+
+paths:
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+              required:
+                - username
+                - password
+
+      responses:
+        '200':
+          description: successful operation
+        '422':
+          description: Username or password is incorrect
+        '500':
+          description: Internal server error
+
+  /operations:
+    get:
+      tags:
+        - Operations
+      summary: Get all operations
+      responses:
+        200:
+          description: OK
+
+  /records:
+    get:
+      tags:
+        - Records
+      summary: Get all records
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: rowsPerPage
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: sortField
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sortOrder
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+
+    post:
+      tags:
+        - Records
+      summary: Create a new record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstNumber:
+                  type: string
+                lastNumber:
+                  type: string
+                operation_id:
+                  type: string
+              required:
+                - operation_id
+      responses:
+        200:
+          description: OK
+
+  /records/{id}:
+    delete:
+      tags:
+        - Records
+      summary: Delete a record by ID
+      parameters:
+        - name: id
+          in: path
+          description: Record ID
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+
+components:
+
+  securitySchemes:
+    Bearer:
+      type: apiKey
+      description: User Authentication and Authorization JWT
+      name: Authorization
+      in: header
