@@ -1,6 +1,6 @@
 # Arithmetic Calculator API
 
-[![tests](https://github.com/OswaldoRodriguez123/arithmetic-calculator-api/actions/workflows/tests.yml/badge.svg)](https://github.com/OswaldoRodriguez123/arithmetic-calculator-api/actions/workflows/tests.yml)
+[![tests](https://github.com/OswaldoRodriguez123/arithmetic-calculator-api/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/OswaldoRodriguez123/arithmetic-calculator-api/actions/workflows/tests.yml)
 
 REST API for an arithmetic calculator: users authenticate with JWT, run
 operations from a catalog, and every operation is stored as a record that
