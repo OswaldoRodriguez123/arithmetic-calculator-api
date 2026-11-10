@@ -87,6 +87,7 @@ describe('OperationRepository', () => {
 
     jest.spyOn(OperationController.prototype, 'getById').mockResolvedValue(mockOperation);
     jest.spyOn(UserController.prototype, 'getById').mockResolvedValue(mockUser);
+    jest.spyOn(RecordRepository.prototype, 'getLastRecord').mockResolvedValue(null);
 
     // Arrange
     const props: StoreControllerProps = {
