@@ -1,7 +1,7 @@
 import { createToken } from '@/common/services/jwt.service';
 import { User } from '../models';
 import { IUserRepository, UserRepository } from '../repositories';
-import { compareHash } from '../utils/common';
+import { compareHash, DECOY_HASH } from '../utils/common';
 
 interface LoginProps {
   username: string;
@@ -22,7 +22,12 @@ class UserController implements IUserController {
 
   async login({ username, password } : LoginProps) {
     const user = await this.getByUsername(username);
-    if(!user) return null;
+    if(!user) {
+      // Decoy compare: keep the unknown-user path as expensive as the
+      // known-user path so usernames cannot be enumerated by timing.
+      compareHash(password, DECOY_HASH);
+      return null;
+    }
     if(!compareHash(password, user?.password || '')) return null;
 
     user.token = createToken({ name: user?.name, id: user.id });

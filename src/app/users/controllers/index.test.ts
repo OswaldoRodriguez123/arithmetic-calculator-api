@@ -17,6 +17,22 @@ describe('UserController', () => {
     expect(result).toEqual(expectedUser);
   });
 
+  test('login runs a decoy compare when the user does not exist', async () => {
+    // Arrange
+    jest.spyOn(UserRepository.prototype, 'getByUsername').mockResolvedValue(null);
+    const compareSpy = jest.spyOn(commonFunctions, 'compareHash').mockReturnValue(false);
+
+    // Act
+    const controller = new UserController();
+    const result = await controller.login({ username: 'nosuchuser', password: 'secret123' });
+
+    // Assert
+    expect(result).toBeNull();
+    // The failure path must cost as much as the success path (bcrypt compare),
+    // otherwise usernames can be enumerated by timing.
+    expect(compareSpy).toHaveBeenCalledWith('secret123', commonFunctions.DECOY_HASH);
+  });
+
   test('getById should return the user with the specified id', async () => {
     // Arrange
     const expectedUser = { id: '1', name: 'User 1' };
