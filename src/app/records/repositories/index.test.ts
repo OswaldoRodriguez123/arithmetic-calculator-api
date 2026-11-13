@@ -1,5 +1,6 @@
 import { RecordRepository } from './';
 import { RecordEntity } from '@/common/entities';
+import { Op } from 'sequelize';
 
 describe('RecordRepository', () => {
   test('getAll should return all records', async () => {
@@ -35,6 +36,56 @@ describe('RecordRepository', () => {
       rows: expectedRecords,
       count: 1
     });
+  });
+
+  test('search date predicate binds the pattern instead of interpolating SQL', async () => {
+    // Arrange
+    const findSpy = jest.spyOn(RecordEntity, 'findAndCountAll').mockResolvedValue({ rows: [], count: 0 } as any);
+    findSpy.mockClear();
+    const payload = `x' OR '1'='1' --`;
+
+    // Act
+    const repository = new RecordRepository();
+    await repository.getAll({ page: '1', rowsPerPage: '10', search: payload, userId: 'u' } as any);
+
+    // Assert
+    const options = findSpy.mock.calls[0][0] as any;
+    const orPredicates: any[] = options.where[Op.or];
+    // No raw Sequelize.literal anywhere in the search predicates.
+    expect(orPredicates.some((p) => p?.constructor?.name === 'Literal')).toBe(false);
+    // The date leg binds the payload as an Op.like parameter.
+    const whereLeg = orPredicates.find((p) => p?.constructor?.name === 'Where');
+    expect(whereLeg?.logic?.[Op.like]).toBe(`%${payload}%`);
+  });
+
+  test('clamps rowsPerPage and page defensively', async () => {
+    // Arrange
+    const findSpy = jest.spyOn(RecordEntity, 'findAndCountAll').mockResolvedValue({ rows: [], count: 0 } as any);
+    findSpy.mockClear();
+
+    // Act
+    const repository = new RecordRepository();
+    await repository.getAll({ page: '999999', rowsPerPage: '5000', userId: 'u' } as any);
+
+    // Assert
+    const options = findSpy.mock.calls[0][0] as any;
+    expect(options.limit).toBe(100);
+    expect(options.offset).toBeGreaterThanOrEqual(0);
+  });
+
+  test('falls back to safe paging defaults for unparsable input', async () => {
+    // Arrange
+    const findSpy = jest.spyOn(RecordEntity, 'findAndCountAll').mockResolvedValue({ rows: [], count: 0 } as any);
+    findSpy.mockClear();
+
+    // Act
+    const repository = new RecordRepository();
+    await repository.getAll({ page: 'abc', rowsPerPage: '', userId: 'u' } as any);
+
+    // Assert
+    const options = findSpy.mock.calls[0][0] as any;
+    expect(options.limit).toBe(10);
+    expect(options.offset).toBe(0);
   });
 
   test('getById should return the record with the specified id', async () => {
