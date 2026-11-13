@@ -78,6 +78,29 @@ JWT_SECRET=<random-string-at-least-32-chars>
 `JWT_SECRET` is required — the app refuses to start without it. Generate one
 with `openssl rand -hex 32`.
 
+## Production deploy (Render)
+
+Build and start commands for the web service (Settings → Build & Deploy):
+
+```text
+Build Command:  npm ci --include=dev && npm run build
+Start Command:  npm start
+```
+
+`npm start` runs the **compiled** output (`node build/server.js`) — tsc-alias
+already rewrote the path aliases, so no TypeScript tooling is needed at
+runtime. Do not run `ts-node` in production: the TypeScript toolchain is
+dev-only, and with `NODE_ENV=production` npm does not install
+`devDependencies` (`tsconfig-paths`, `typescript`, `jest`, ...), which is why
+a manual `ts-node -r tsconfig-paths/register server.ts` start command fails
+with `Cannot find module 'tsconfig-paths/register'`. `--include=dev` is
+required on the build side because the compile itself needs `typescript`
+and `tsc-alias`.
+
+Required env vars in production: `JWT_SECRET`, `DATABASE_PASSWORD`,
+`CORS_ORIGIN` (the app refuses to boot without any of them), plus `DATABASE_*`
+and anything else you override from `example.env`.
+
 Create the database, then start the development server so Sequelize syncs the
 tables:
 

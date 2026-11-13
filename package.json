@@ -5,7 +5,7 @@
   "main": "server.ts",
   "scripts": {
     "build": "npx tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
-    "start": "node -r tsconfig-paths/register ./build/server.js",
+    "start": "node build/server.js",
     "dev": "ts-node -r tsconfig-paths/register server.ts",
     "test": "jest"
   },
