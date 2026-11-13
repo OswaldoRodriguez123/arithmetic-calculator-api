@@ -1,8 +1,16 @@
 import express, { Express, NextFunction, Request, Response } from 'express';
 import routes from '@/common/routes';
 import cors from 'cors';
+import helmet from 'helmet';
+import { envString } from '@/config/env';
 
 export const API_URL = '/api/v1';
+
+const corsOrigin = envString('CORS_ORIGIN', '*');
+const corsOptions: cors.CorsOptions =
+  corsOrigin === '*'
+    ? { origin: '*' }
+    : { origin: corsOrigin.split(',').map((s) => s.trim()).filter(Boolean) };
 
 export const createApp = () => {
 
@@ -13,10 +21,11 @@ export const createApp = () => {
   // rate limiter see the real client IP instead of the proxy's.
   app.set('trust proxy', 1);
 
+  app.use(helmet());
   app.use(express.json());
 
   routes.forEach(function (item) {
-    router.use(item.route, cors(), item.handler)
+    router.use(item.route, cors(corsOptions), item.handler)
   });
 
   app.use(API_URL, router);

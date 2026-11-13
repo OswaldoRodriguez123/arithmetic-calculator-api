@@ -44,9 +44,13 @@ paths:
 
       responses:
         '200':
-          description: successful operation
-        '422':
-          description: Username or password is incorrect
+          description: successful operation (body contains a JWT)
+        '400':
+          description: Invalid request body (username/password must be strings)
+        '401':
+          description: Invalid credentials
+        '429':
+          description: Too many login attempts, please try again later
         '500':
           description: Internal server error
 
@@ -130,8 +134,12 @@ paths:
           schema:
             type: string
       responses:
-        200:
-          description: OK
+        204:
+          description: Record soft-deleted (empty body)
+        401:
+          description: Missing or invalid token
+        404:
+          description: Record not found (or not owned by the caller)
 
 components:
 
