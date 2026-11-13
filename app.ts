@@ -2,15 +2,32 @@ import express, { Express, NextFunction, Request, Response } from 'express';
 import routes from '@/common/routes';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { envString } from '@/config/env';
 
 export const API_URL = '/api/v1';
 
-const corsOrigin = envString('CORS_ORIGIN', '*');
-const corsOptions: cors.CorsOptions =
-  corsOrigin === '*'
-    ? { origin: '*' }
-    : { origin: corsOrigin.split(',').map((s) => s.trim()).filter(Boolean) };
+// CORS must name explicit origins once cookies are in play: a wildcard is
+// invalid with credentials, and reflecting any origin would hand the user's
+// session cookie to every site. Production therefore requires CORS_ORIGIN;
+// development defaults to the local Vite dev server (both localhost ports).
+const corsOrigin = envString('CORS_ORIGIN', '');
+if (!corsOrigin && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'CORS_ORIGIN is required in production when using cookie sessions (comma-separated list of allowed origins). See example.env.'
+  );
+}
+const allowedOrigins = corsOrigin
+  ? corsOrigin.split(',').map((s) => s.trim()).filter(Boolean)
+  : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
+let corsOptions: cors.CorsOptions;
+if (corsOrigin === '*') {
+  console.warn('CORS_ORIGIN=* is legacy open mode: cookie sessions will not work cross-origin. Set explicit origins instead.');
+  corsOptions = { origin: '*' };
+} else {
+  corsOptions = { origin: allowedOrigins, credentials: true };
+}
 
 export const createApp = () => {
 
@@ -23,6 +40,7 @@ export const createApp = () => {
 
   app.use(helmet());
   app.use(express.json());
+  app.use(cookieParser());
 
   routes.forEach(function (item) {
     router.use(item.route, cors(corsOptions), item.handler)

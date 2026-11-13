@@ -6,8 +6,9 @@ REST API for an arithmetic calculator: users authenticate with JWT, run
 operations from a catalog, and every operation is stored as a record that
 charges credits from the user's balance.
 
-- **Auth**: `POST /api/v1/auth/login` returns a JWT; protected routes require
-  `Authorization: Bearer <token>`.
+- **Auth**: `POST /api/v1/auth/login` sets an httpOnly session cookie (the JWT
+  is never exposed to JavaScript). Protected routes accept the cookie, or
+  `Authorization: Bearer <token>` for non-browser tooling.
 - **Operations**: a catalog of addition, subtraction, multiplication, division,
   square root and random string, each with a credit cost.
 - **Records**: create an operation record, list it with pagination, sorting and
@@ -30,11 +31,30 @@ The full contract is in
 
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
-| `POST` | `/api/v1/auth/login` | no | Log in and get a JWT. |
+| `POST` | `/api/v1/auth/login` | no | Log in; sets the httpOnly `access_token` cookie (no token in the body). |
+| `POST` | `/api/v1/auth/logout` | no | Clear the session cookie (idempotent). |
+| `GET` | `/api/v1/auth/me` | yes | Return the caller's public profile (`{ id, name, username }`). |
 | `GET` | `/api/v1/operations` | yes | List the operation catalog. |
 | `GET` | `/api/v1/records` | yes | List records (`page`, `rowsPerPage`, `sortField`, `sortOrder`, `search`). |
 | `POST` | `/api/v1/records` | yes | Run an operation and store the record. |
 | `DELETE` | `/api/v1/records/:id` | yes | Soft-delete a record. |
+
+### Cookie sessions
+
+The browser SPA authenticates with an httpOnly cookie, so the JWT is never
+available to JavaScript (closing the localStorage XSS exfiltration path).
+Cookie flags: `HttpOnly; Path=/; Max-Age=<JWT_EXPIRATION_SECONDS>`, and
+`SameSite=Lax` (development over plain http) or `SameSite=None; Secure`
+(`NODE_ENV=production`, required when the SPA and the API live on different
+sites, e.g. GitHub Pages → Render). `Secure` production cookies additionally
+require HTTPS; Render provides that.
+
+Because the SPA sends credentials cross-origin, CORS must name explicit
+origins (a wildcard is incompatible with cookies) and the API refuses to
+start in production without `CORS_ORIGIN`. CSRF is mitigated by design: the
+API only parses JSON bodies (form posts arrive unparsed and fail validation)
+and cross-origin `fetch` requires a preflight, which the origin allowlist
+rejects; there are no state-changing `GET` routes.
 
 ## Setup
 
@@ -84,7 +104,7 @@ example user and the operation catalog.
 | `JWT_SECRET_PREVIOUS` | _(none)_ | no | Previous key, accepted only for verification during a rotation. |
 | `JWT_KID` | `v1` | no | `kid` header embedded in tokens. |
 | `JWT_EXPIRATION_SECONDS` | `3600` | no | Token lifetime. |
-| `CORS_ORIGIN` | `*` | no | Comma-separated allowed origins. Set to the UI origin in production. |
+| `CORS_ORIGIN` | `http://localhost:3000` (dev) | **yes, in production** | Comma-separated allowed origins for credentialed CORS. The app throws at startup in production if it is missing. `*` is a legacy open mode (no cookie sessions) and logs a warning. |
 | `LOGIN_RATE_LIMIT_MAX` | `20` | no | Login requests per 15 min per IP. |
 | `LOGIN_USERNAME_RATE_LIMIT_MAX` | `10` | no | Login requests per 15 min per username. |
 

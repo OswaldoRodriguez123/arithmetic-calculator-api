@@ -10,6 +10,7 @@ servers:
 - url: https://arithmetic-calculator-api.onrender.com/api/v1
 
 security:
+- CookieAuth: []
 - Bearer: []
 
 tags:
@@ -44,7 +45,16 @@ paths:
 
       responses:
         '200':
-          description: successful operation (body contains a JWT)
+          description: |-
+            Successful operation. The JWT is set as an httpOnly `access_token`
+            cookie (SameSite=Lax in development, SameSite=None + Secure in
+            production) and is intentionally NOT in the response body.
+            The body carries the user's public profile (no password).
+          headers:
+            Set-Cookie:
+              description: httpOnly session cookie (`access_token`)
+              schema:
+                type: string
         '400':
           description: Invalid request body (username/password must be strings)
         '401':
@@ -53,6 +63,27 @@ paths:
           description: Too many login attempts, please try again later
         '500':
           description: Internal server error
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Logout (clears the session cookie)
+      security: []
+      responses:
+        '204':
+          description: Session cookie cleared. Always succeeds.
+
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Current session (probe used by the SPA guard)
+      responses:
+        200:
+          description: Authenticated; returns the caller's public profile
+        401:
+          description: Missing or invalid credentials
 
   /operations:
     get:
@@ -144,8 +175,14 @@ paths:
 components:
 
   securitySchemes:
-    Bearer:
+    CookieAuth:
       type: apiKey
-      description: User Authentication and Authorization JWT
-      name: Authorization
+      in: cookie
+      name: access_token
+      description: httpOnly session cookie set by POST /auth/login. Used by the browser SPA.
+    Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT issued at login; accepted for non-browser tooling. The login response no longer returns the token in the body, so interactive browser clients use CookieAuth.
       in: header

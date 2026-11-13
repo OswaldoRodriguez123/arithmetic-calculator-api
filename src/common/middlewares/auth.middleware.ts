@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, TokenData } from '../services/jwt.service';
+import { ACCESS_TOKEN_COOKIE } from '../services/cookie.service';
 import { UserEntity } from '@/common/entities';
 
 interface ErrorResponse extends Error {
@@ -9,12 +10,20 @@ interface ErrorResponse extends Error {
 export default async (req: Request, res: Response, next: NextFunction) => {
   let error: ErrorResponse | null = null;
   try {
+    // Bearer header wins (tooling/scripts); otherwise fall back to the
+    // httpOnly session cookie set at login.
     const authHeader = req.get('Authorization');
-    if (!authHeader) {
-      error = new Error('Missing Authorization header');
+    let token: string | undefined;
+    if (authHeader) {
+      token = authHeader.split(' ')[1];
+    } else if ((req as any).cookies) {
+      token = (req as any).cookies[ACCESS_TOKEN_COOKIE];
+    }
+
+    if (!token) {
+      error = new Error('Missing credentials');
       error.statusCode = 401;
     } else {
-      const token = authHeader.split(' ')[1];
 
       let decodedToken: TokenData | null = null;
       try {
