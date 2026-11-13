@@ -48,13 +48,45 @@ describe('RecordRepository', () => {
       operation_response: '1',
       date: ''
     });
-    jest.spyOn(RecordEntity, 'findByPk').mockResolvedValue(expectedRecord);
+    jest.spyOn(RecordEntity, 'findOne').mockResolvedValue(expectedRecord);
 
     // Act
     const repository = new RecordRepository();
-    const result = await repository.getById('1');
+    const result = await repository.getById('1', 'user123');
 
     // Assert
     expect(result).toEqual(expectedRecord);
+  });
+
+  test('getById scopes the lookup to the owning user and non-deleted rows', async () => {
+    // Arrange
+    const findOneSpy = jest.spyOn(RecordEntity, 'findOne').mockResolvedValue(null);
+
+    // Act
+    const repository = new RecordRepository();
+    await repository.getById('rec1', 'user123');
+
+    // Assert
+    expect(findOneSpy).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'rec1', user_id: 'user123', deleted_at: null },
+    }));
+  });
+
+  test('delete scopes the soft-delete to the owning user', async () => {
+    // Arrange
+    const updateSpy = jest.spyOn(RecordEntity, 'update').mockResolvedValue([1] as any);
+
+    // Act
+    const repository = new RecordRepository();
+    const affected = await repository.delete('rec1', 'user123');
+
+    // Assert
+    expect(affected).toBe(1);
+    expect(updateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ deleted_at: expect.any(String) }),
+      expect.objectContaining({
+        where: { id: 'rec1', user_id: 'user123', deleted_at: null },
+      }),
+    );
   });
 });

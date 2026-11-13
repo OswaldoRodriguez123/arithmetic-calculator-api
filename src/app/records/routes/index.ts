@@ -1,4 +1,4 @@
-import express, { Response, Request } from 'express';
+import express, { Response, Request, NextFunction } from 'express';
 import RecordController from '@/app/records/controllers';
 import isAuth from '@/common/middlewares/auth.middleware';
 import { Filters } from './../types';
@@ -20,9 +20,18 @@ router.post('/', isAuth, async(req: Request, res: Response) => {
   return res.status(200).json({ status: 200, data: record });
 });
 
-router.delete('/:id', isAuth, async(req: Request, res: Response) => {
-  const record = await controller.delete(req.params.id);
-  return res.status(200).json({ status: 200, data: record });
+router.delete('/:id', isAuth, async(req: Request, res: Response, next: NextFunction) => {
+  try {
+    const affected = await controller.delete(req.params.id, req.params.userId);
+    if (affected === 0) {
+      // 404 carries no information about whether the record exists and
+      // belongs to someone else, or does not exist at all.
+      return res.status(404).json({ message: 'Record not found' });
+    }
+    return res.status(204).send();
+  } catch (err) {
+    return next(err as Error);
+  }
 });
 
 export default router;

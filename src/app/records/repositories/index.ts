@@ -5,10 +5,10 @@ import { GetAllResponse, Filters } from './../types';
 
 export interface IRecordRepository {
   getAll(filters: Filters) : Promise<GetAllResponse>;
-  getById(id: string) : Promise<RecordEntity | null>;
+  getById(id: string, userId: string) : Promise<RecordEntity | null>;
   store(data: Record) : Promise<RecordEntity | null>;
   getLastRecord(userId: string) : Promise<RecordEntity | null>;
-  delete(id: string) : Promise<number>;
+  delete(id: string, userId: string) : Promise<number>;
 }
 
 export class RecordRepository implements IRecordRepository {
@@ -51,8 +51,14 @@ export class RecordRepository implements IRecordRepository {
     return records;
   }
 
-  async getById(id: string): Promise<RecordEntity | null> {
-    const record = await RecordEntity.findByPk(id);
+  async getById(id: string, userId: string): Promise<RecordEntity | null> {
+    const record = await RecordEntity.findOne({
+      where: {
+        id,
+        user_id: userId,
+        deleted_at: null,
+      },
+    });
 
     return record;
   }
@@ -75,13 +81,13 @@ export class RecordRepository implements IRecordRepository {
     return record;
   }
 
-  async delete(id: string): Promise<number> {
+  async delete(id: string, userId: string): Promise<number> {
     const result = await RecordEntity.update(
       {
         deleted_at: new Date().toISOString()
       },
       {
-        where: { id }
+        where: { id, user_id: userId, deleted_at: null }
       }
     );
 

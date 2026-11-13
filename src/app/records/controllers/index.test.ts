@@ -61,10 +61,22 @@ describe('OperationRepository', () => {
     jest.spyOn(RecordRepository.prototype, 'getById').mockResolvedValue(expectedRecord);
 
     // Act
-    const result = await recordController.getById('1');
+    const result = await recordController.getById('1', 'user123');
 
     // Assert
     expect(result).toEqual(expectedRecord);
+  });
+
+  test('delete forwards the id and the caller userId to the repository', async () => {
+    // Arrange
+    const repoSpy = jest.spyOn(RecordRepository.prototype, 'delete').mockResolvedValue(1);
+
+    // Act
+    const result = await recordController.delete('rec1', 'user123');
+
+    // Assert
+    expect(repoSpy).toHaveBeenCalledWith('rec1', 'user123');
+    expect(result).toBe(1);
   });
 
   test('store should store a new record and return the stored record', async () => {
