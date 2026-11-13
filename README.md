@@ -46,7 +46,7 @@ available to JavaScript (closing the localStorage XSS exfiltration path).
 Cookie flags: `HttpOnly; Path=/; Max-Age=<JWT_EXPIRATION_SECONDS>`, and
 `SameSite=Lax` (development over plain http) or `SameSite=None; Secure`
 (`NODE_ENV=production`, required when the SPA and the API live on different
-sites, e.g. GitHub Pages → Render). `Secure` production cookies additionally
+sites, e.g. a static host → Render web service). `Secure` production cookies additionally
 require HTTPS; Render provides that.
 
 Because the SPA sends credentials cross-origin, CORS must name explicit
@@ -127,7 +127,7 @@ example user and the operation catalog.
 | `JWT_SECRET_PREVIOUS` | _(none)_ | no | Previous key, accepted only for verification during a rotation. |
 | `JWT_KID` | `v1` | no | `kid` header embedded in tokens. |
 | `JWT_EXPIRATION_SECONDS` | `3600` | no | Token lifetime. |
-| `CORS_ORIGIN` | `http://localhost:3000` (dev) | **yes, in production** | Comma-separated allowed origins for credentialed CORS. The app throws at startup in production if it is missing. `*` is a legacy open mode (no cookie sessions) and logs a warning. |
+| `CORS_ORIGIN` | `http://localhost:3000` (dev) | **yes, in production** | Comma-separated allowed origins for credentialed CORS. The app throws at startup in production if it is missing. `*` is a legacy open mode (no cookie sessions) and logs a warning. Production example: `CORS_ORIGIN=https://arithmetic-calculator-ui.onrender.com` |
 | `LOGIN_RATE_LIMIT_MAX` | `20` | no | Login requests per 15 min per IP. |
 | `LOGIN_USERNAME_RATE_LIMIT_MAX` | `10` | no | Login requests per 15 min per username. |
 
