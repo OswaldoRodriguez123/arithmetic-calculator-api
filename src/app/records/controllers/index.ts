@@ -11,10 +11,11 @@ import { getAllSchema, newRecordSchema } from '../schemas';
 
 export interface IRecordController {
   getAll(filters: Filters): Promise<GetAllResponse>;
-  getById(id: string): Promise<RecordEntity | null>;
+  getById(id: string, userId: string): Promise<RecordEntity | null>;
   store(data: StoreControllerProps): Promise<RecordEntity | null>;
   getUserBalance(userId: string, amount: number): Promise<number>;
   getOperationResponse(type: OperationType, props: StoreControllerProps): Promise<string>;
+  delete(id: string, userId: string): Promise<number>;
 }
 
 class RecordController implements IRecordController {
@@ -41,9 +42,9 @@ class RecordController implements IRecordController {
     }
   }
 
-  async getById(id: string): Promise<RecordEntity | null> {
+  async getById(id: string, userId: string): Promise<RecordEntity | null> {
     if(!id) throw new Error("id is required");
-    const record = await this.repository.getById(id);
+    const record = await this.repository.getById(id, userId);
     return record;
   }
 
@@ -126,8 +127,8 @@ class RecordController implements IRecordController {
     return operation_response;
   }
 
-  async delete(id: string): Promise<number> {
-    const affectedRows = await this.repository.delete(id);
+  async delete(id: string, userId: string): Promise<number> {
+    const affectedRows = await this.repository.delete(id, userId);
     return affectedRows;
   }
 }

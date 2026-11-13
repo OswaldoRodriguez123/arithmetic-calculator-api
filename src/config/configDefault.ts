@@ -22,7 +22,7 @@ const configDefault: ConfigDefault = {
     dialect: envString('DATABASE_DIALECT', 'postgres'),
     database: envString('DATABASE_NAME', 'arithmetic_calculator'),
     username: envString('DATABASE_USERNAME', 'postgres'),
-    password: envString('DATABASE_PASSWORD', '1234'),
+    password: envString('DATABASE_PASSWORD'),
     host: envString('DATABASE_HOST', 'localhost'),
     port: envNumber('DATABASE_PORT', 5432),
   },

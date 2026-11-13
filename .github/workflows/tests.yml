@@ -2,6 +2,9 @@ name: tests
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,10 +28,14 @@ jobs:
       DATABASE_PASSWORD: postgres
       DATABASE_HOST: localhost
       DATABASE_PORT: 5432
+      # Test-only secret for CI; production uses its own via the platform's secret store.
+      JWT_SECRET: ci-only-secret-not-used-anywhere-else-0123456789abcdef
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # actions/checkout v4 (pinned to a commit SHA)
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      # actions/setup-node v4 (pinned to a commit SHA)
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
-      - run: npm install
+      - run: npm ci
       - run: npm test

@@ -6,4 +6,5 @@ module.exports = {
     "^@/(.*)$": "<rootDir>/src/$1",
     "^~/(.*)$": "<rootDir>/$1"
   },
+  setupFiles: ['<rootDir>/jest.setup.js'],
 };

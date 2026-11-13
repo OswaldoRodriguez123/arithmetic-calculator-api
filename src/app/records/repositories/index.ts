@@ -5,10 +5,10 @@ import { GetAllResponse, Filters } from './../types';
 
 export interface IRecordRepository {
   getAll(filters: Filters) : Promise<GetAllResponse>;
-  getById(id: string) : Promise<RecordEntity | null>;
+  getById(id: string, userId: string) : Promise<RecordEntity | null>;
   store(data: Record) : Promise<RecordEntity | null>;
   getLastRecord(userId: string) : Promise<RecordEntity | null>;
-  delete(id: string) : Promise<number>;
+  delete(id: string, userId: string) : Promise<number>;
 }
 
 export class RecordRepository implements IRecordRepository {
@@ -16,14 +16,21 @@ export class RecordRepository implements IRecordRepository {
 
     const { page, rowsPerPage, sortField, sortOrder, search, userId } = filters;
 
-    const whereClause = search
+    // Defense in depth: the schema caps these too, but repository callers
+    // may bypass it. Never let limit/offset be NaN, negative or huge.
+    const limit = Math.min(Math.max(parseInt(String(rowsPerPage), 10) || 10, 1), 100);
+    const pageNumber = Math.max(parseInt(String(page), 10) || 1, 1);
+    const offset = (pageNumber - 1) * limit;
+
+    const term = search ? String(search).slice(0, 200) : undefined;
+    const like = term ? `%${term}%` : undefined;
+    const whereClause = like
       ? {
           [Op.or]: [
-            { id: { [Op.like]: `%${search}%` } },
-            { '$operation.name$': { [Op.like]: `%${search}%` } },
-            { operation_response: { [Op.like]: `%${search}%` } },
-            { operation_response: { [Op.like]: `%${search}%` } },
-            Sequelize.literal(`CAST(date as TEXT) LIKE '%${search}%'`),
+            { id: { [Op.like]: like } },
+            { '$operation.name$': { [Op.like]: like } },
+            { operation_response: { [Op.like]: like } },
+            Sequelize.where(Sequelize.cast(Sequelize.col('date'), 'TEXT'), { [Op.like]: like }),
           ]
         }
       : {};
@@ -41,8 +48,8 @@ export class RecordRepository implements IRecordRepository {
         ...whereClause
       },
       order: sortField && sortOrder ? [[sortField, sortOrder]] : undefined,
-      limit: Number(rowsPerPage),
-      offset: (Number(page) - 1) * Number(rowsPerPage),
+      limit,
+      offset,
       include: [
         { model: OperationEntity, as: 'operation', attributes: [] }
       ],
@@ -51,8 +58,14 @@ export class RecordRepository implements IRecordRepository {
     return records;
   }
 
-  async getById(id: string): Promise<RecordEntity | null> {
-    const record = await RecordEntity.findByPk(id);
+  async getById(id: string, userId: string): Promise<RecordEntity | null> {
+    const record = await RecordEntity.findOne({
+      where: {
+        id,
+        user_id: userId,
+        deleted_at: null,
+      },
+    });
 
     return record;
   }
@@ -75,13 +88,13 @@ export class RecordRepository implements IRecordRepository {
     return record;
   }
 
-  async delete(id: string): Promise<number> {
+  async delete(id: string, userId: string): Promise<number> {
     const result = await RecordEntity.update(
       {
         deleted_at: new Date().toISOString()
       },
       {
-        where: { id }
+        where: { id, user_id: userId, deleted_at: null }
       }
     );
 

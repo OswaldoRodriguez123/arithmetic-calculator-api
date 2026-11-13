@@ -26,7 +26,11 @@ UserEntity.hasMany(RecordEntity, {
 RecordEntity.belongsTo(OperationEntity, { foreignKey: 'operation_id', as: 'operation' });
 RecordEntity.belongsTo(UserEntity, { foreignKey: 'user_id', as: 'user' });
 
-SequelizeInstance.sync();
+// sync() performs DDL against the database at import time. Tests mock the
+// entities and must not attempt real connections.
+if (process.env.NODE_ENV !== 'test') {
+  SequelizeInstance.sync();
+}
 
 export {
   OperationEntity,

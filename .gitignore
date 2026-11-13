@@ -21,5 +21,3 @@ logs
 # Local env files
 .env
 !.env.example
-
-package-lock.json

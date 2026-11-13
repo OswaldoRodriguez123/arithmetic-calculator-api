@@ -43,16 +43,20 @@ npm install
 cp example.env .env
 ```
 
-Fill in `.env`:
+Fill in `.env` (see [`example.env`](example.env) for the full list):
 
 ```text
-PORT=3001
+APP_PORT=3001
 DATABASE_NAME=arithmetic_calculator
 DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=postgres
 DATABASE_HOST=localhost
 DATABASE_PORT=5432
+JWT_SECRET=<random-string-at-least-32-chars>
 ```
+
+`JWT_SECRET` is required — the app refuses to start without it. Generate one
+with `openssl rand -hex 32`.
 
 Create the database, then start the development server so Sequelize syncs the
 tables:
@@ -61,9 +65,47 @@ tables:
 npm run dev
 ```
 
-The API listens on `http://localhost:3001` (configurable with `PORT`). Load the
+The API listens on `http://localhost:3001` (configurable with `APP_PORT`). Load the
 seed data from [`src/queries/queries.sql`](src/queries/queries.sql) to create an
 example user and the operation catalog.
+
+### Environment variables
+
+| Variable | Default | Required | Description |
+| --- | --- | --- | --- |
+| `APP_PORT` | `3001` | no | HTTP port. |
+| `DATABASE_DIALECT` | `postgres` | no | Sequelize dialect. |
+| `DATABASE_NAME` | `arithmetic_calculator` | no | Database name. |
+| `DATABASE_USERNAME` | `postgres` | no | Database user. |
+| `DATABASE_PASSWORD` | _(none)_ | **yes, in production** | Database password. The app throws at startup in production if it is missing. |
+| `DATABASE_HOST` | `localhost` | no | Database host. |
+| `DATABASE_PORT` | `5432` | no | Database port. |
+| `JWT_SECRET` | _(none)_ | **yes** | HMAC key for signing tokens. |
+| `JWT_SECRET_PREVIOUS` | _(none)_ | no | Previous key, accepted only for verification during a rotation. |
+| `JWT_KID` | `v1` | no | `kid` header embedded in tokens. |
+| `JWT_EXPIRATION_SECONDS` | `3600` | no | Token lifetime. |
+| `CORS_ORIGIN` | `*` | no | Comma-separated allowed origins. Set to the UI origin in production. |
+| `LOGIN_RATE_LIMIT_MAX` | `20` | no | Login requests per 15 min per IP. |
+| `LOGIN_USERNAME_RATE_LIMIT_MAX` | `10` | no | Login requests per 15 min per username. |
+
+### Token rotation
+
+1. Deploy with `JWT_SECRET=<new-secret>` and `JWT_SECRET_PREVIOUS=<old-secret>`.
+   New tokens are signed with the new secret; tokens signed with the old secret
+   keep working until they expire.
+2. After the old token lifetime (`JWT_EXPIRATION_SECONDS`) has elapsed,
+   redeploy with `JWT_SECRET_PREVIOUS` empty.
+
+### Operations notes
+
+- **Soft-deleted records are not deleted.** `DELETE /api/v1/records/:id` sets
+  `deleted_at`; the row stays in the table. To restore, an operator must run
+  `UPDATE records SET deleted_at = NULL WHERE id = '<record-id>';` directly
+  against the database.
+- **No migrations.** Tables are created by `sequelize.sync()` at import time;
+  there is no migration history. Schema changes require manual coordination.
+- **Rate limits** are per-process (in-memory). Multi-instance deployments need
+  an edge/WAF rule or a shared store to enforce a global limit.
 
 ## Scripts
 
@@ -81,9 +123,8 @@ npm test
 ```
 
 The suite covers the user, operation and record controllers and repositories
-with Jest mocks. The records controller suite imports the Sequelize models, so
-it needs a reachable PostgreSQL instance configured through the `DATABASE_*`
-variables; CI starts one as a service.
+with Jest mocks; `NODE_ENV=test` skips `sequelize.sync()`, so no reachable
+database is needed. CI additionally starts PostgreSQL as a service.
 
 ## License
 
